@@ -30,3 +30,14 @@ def add_reports_to_subscription(user_name, list_reports):
         list_data[1] = copy_list
         f_db[user_name] = list_data
     f_db.close()
+
+
+def unsubscribe_from_receiving_reports(user_name):
+    f_db = sh.open(filename)
+    if user_name in f_db.keys():
+        list_data = f_db[user_name]
+        empty_list = list()
+        list_data[1] = empty_list
+        f_db[user_name] = list_data
+    # f_db.close()
+    return f_db[user_name]

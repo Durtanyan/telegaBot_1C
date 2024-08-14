@@ -1,6 +1,7 @@
 from aiogram import Bot, Dispatcher
 from aiogram.filters import Command  # type: ignore
 from aiogram.types import Message
+import logging
 import called_functions
 import config
 import text_constants
@@ -18,14 +19,20 @@ bot = Bot(token=BOT_TOKEN)
 dp = Dispatcher()
 
 
+logging.basicConfig(level=logging.INFO, filename='msg.log')
+
+
 # Этот хэндлер будет срабатывать на команду "/start"
 async def process_start_command(message: Message):
     user_name = message.chat.username
     chat_id = message.chat.id
     add_user_in_db = called_functions.add_user_in_db(user_name, chat_id)
     if add_user_in_db:
+        logging.info(f'{user_name} зарегистрировался в системе')
         await message.answer(f'Привет, {user_name}! {TRUE_MESSAGEREGISTRATION}\n{HELP_MESSAGE}')
     else:
+        logging.info(
+            f'{user_name} пытался повторно зарегистрироваться в системе.')
         await message.answer(f'Прошу прощения, {user_name}! {FALSE_MESSAGEREGISTRATION}')
     url = called_functions.get_image_cat()
     await bot.send_photo(chat_id, url)
@@ -34,6 +41,8 @@ async def process_start_command(message: Message):
 # Этот хэндлер будет срабатывать на команду "/help
 async def process_help_command(message: Message):
     chat_id = message.chat.id
+    user_name = message.chat.username
+    logging.info(f'{user_name} вызвал команду - help.')
     await bot.send_message(chat_id, HELP_MESSAGE)
 
 
@@ -41,6 +50,9 @@ async def process_help_command(message: Message):
 # Просто выводит список доступных для подписки отчетов с их номерами
 async def process_command_1(message: Message):
     chat_id = message.chat.id
+    user_name = message.chat.username
+    logging.info(
+        f'{user_name} Воспользовался просмотром доступных для подписки отчетов.')
     list_available_reports = [str(i + 1) + ". " + names_available_reports[i]
                               for i in range(len(names_available_reports))]
     await bot.send_message(chat_id, "\n".join(list_available_reports))
@@ -48,12 +60,21 @@ async def process_command_1(message: Message):
 
 # Этот хэндлер будет срабатывать на команду "/command2"
 async def process_command_2(message: Message):
+    chat_id = message.chat.id
+    user_name = message.chat.username
+    logging.info(
+        f'{user_name} Получил отчеты по подписке.')
     await message.answer('Тест. Получены отчеты по подписке.')
 
 
 # Этот хэндлер будет срабатывать на команду "/command3"
 async def process_command_3(message: Message):
-    await message.answer('Тест. Вы отписались от получения отчетов по подписке.')
+    chat_id = message.chat.id
+    user_name = message.chat.username
+    data_user = called_functions.unsubscribe_from_receiving_reports(user_name)
+    logging.info(
+        f'{user_name} Отписался от получения отчетов: {data_user}')
+    await bot.send_message(chat_id, 'Тест. Вы отписались от получения отчетов по подписке.')
 
 
 # Этот хэндлер будет срабатывать на любые ваши текстовые сообщения
@@ -78,11 +99,17 @@ async def send_echo(message: Message):
             # Списки равны - идем в БД и заполняем, ищем пользователя и заполняем
             # второй параметр из списка полученных отчетов. [chat_id, []]
             called_functions.add_reports_to_subscription(user_name, list_int)
+            logging.info(
+                f'{user_name} Подписался на получение отчетов: {list_data}')
             await bot.send_message(chat_id, text_constants.SUBSCRIPTION_MESSAGE)
         else:
+            logging.info(
+                f'{user_name} Ввел данные незарегистрированных отчетов: {list_data}')
             await bot.send_message(chat_id, text_constants.INVALID_DATA)
     except:
         broken_data = text_constants.BROKEN_DATA
+        logging.info(
+            f'{user_name} Ввел невалидные данные: {list_data}')
         await bot.send_message(chat_id, broken_data)
 
 
