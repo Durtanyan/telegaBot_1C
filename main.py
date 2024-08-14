@@ -19,7 +19,8 @@ bot = Bot(token=BOT_TOKEN)
 dp = Dispatcher()
 
 
-logging.basicConfig(level=logging.INFO, filename='msg.log')
+logging.basicConfig(level=logging.INFO, filename='msg.log',
+                    format="%(asctime)s %(levelname)s %(message)s")
 
 
 # Этот хэндлер будет срабатывать на команду "/start"
