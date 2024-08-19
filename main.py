@@ -65,7 +65,8 @@ async def process_command_2(message: Message):
     user_name = message.chat.username
     logging.info(
         f'{user_name} Получил отчеты по подписке.')
-    await message.answer('Тест. Получены отчеты по подписке.')
+    # await message.answer('Тест. Получены отчеты по подписке.')
+    await bot.send_message(chat_id, called_functions.get_subscription_reports(user_name))
 
 
 # Этот хэндлер будет срабатывать на команду "/command3"
