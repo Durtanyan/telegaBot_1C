@@ -2,15 +2,18 @@ from aiogram import Bot, Dispatcher
 from aiogram.filters import Command  # type: ignore
 from aiogram.types import Message
 import logging
+import pprint
 import called_functions
 import config
 import text_constants
 
 # Вместо BOT TOKEN HERE нужно вставить токен вашего бота, полученный у @BotFather
 BOT_TOKEN = config.BOT_TOKEN
+QUERY_ADMINISTRATOR = text_constants.QUERY_ADMINISTRATOR
 TRUE_MESSAGEREGISTRATION = text_constants.TRUE_MESSAGEREGISTRATION
 FALSE_MESSAGEREGISTRATION = text_constants.FALSE_MESSAGEREGISTRATION
 HELP_MESSAGE = text_constants.HELP_MESSAGE
+PROHIBITION_PERMISSION = text_constants.PROHIBITION_PERMISSION
 names_available_reports = text_constants.NAMES_AVAILABLE_REPORTS
 
 
@@ -29,12 +32,15 @@ async def process_start_command(message: Message):
     chat_id = message.chat.id
     add_user_in_db = called_functions.add_user_in_db(user_name, chat_id)
     if add_user_in_db:
-        logging.info(f'{user_name} зарегистрировался в системе')
-        await message.answer(f'Привет, {user_name}! {TRUE_MESSAGEREGISTRATION}\n{HELP_MESSAGE}')
+        logging.info(
+            f'{user_name} отправил запрос администратору на регистрацию в системе.')
+        await message.answer(f'Привет, {user_name}! {QUERY_ADMINISTRATOR}\n{HELP_MESSAGE}')
+        await bot.send_message(text_constants.LIST_ID_ADMINISTRATOR[0], f'{user_name} подал заявку на регистрацию.')
     else:
         logging.info(
             f'{user_name} пытался повторно зарегистрироваться в системе.')
         await message.answer(f'Прошу прощения, {user_name}! {FALSE_MESSAGEREGISTRATION}')
+
     url = called_functions.get_image_cat()
     await bot.send_photo(chat_id, url)
 
@@ -43,8 +49,14 @@ async def process_start_command(message: Message):
 async def process_help_command(message: Message):
     chat_id = message.chat.id
     user_name = message.chat.username
-    logging.info(f'{user_name} вызвал команду - help.')
-    await bot.send_message(chat_id, HELP_MESSAGE)
+    check_resolution = called_functions.check_resolution(user_name)
+    if check_resolution:
+        logging.info(f'{user_name} вызвал команду - help.')
+        await bot.send_message(chat_id, HELP_MESSAGE)
+    else:
+        logging.info(
+            f'{user_name} пытался вызвать команду - help. Запрет использования БД')
+        await bot.send_message(chat_id, PROHIBITION_PERMISSION)
 
 
 # Этот хэндлер будет срабатывать на команду "/command1"
@@ -52,31 +64,70 @@ async def process_help_command(message: Message):
 async def process_command_1(message: Message):
     chat_id = message.chat.id
     user_name = message.chat.username
-    logging.info(
-        f'{user_name} Воспользовался просмотром доступных для подписки отчетов.')
-    list_available_reports = [str(i + 1) + ". " + names_available_reports[i]
-                              for i in range(len(names_available_reports))]
-    await bot.send_message(chat_id, "\n".join(list_available_reports))
+    check_resolution = called_functions.check_resolution(user_name)
+    if check_resolution:
+        logging.info(
+            f'{user_name} Воспользовался просмотром доступных для подписки отчетов.')
+        list_available_reports = [str(i + 1) + ". " + names_available_reports[i]
+                                  for i in range(len(names_available_reports))]
+        await bot.send_message(chat_id, "\n".join(list_available_reports))
+    else:
+        logging.info(
+            f'{user_name} пытался вызвать просмотр доступных отчетов. Запрет использования БД')
+        await bot.send_message(chat_id, PROHIBITION_PERMISSION)
 
 
 # Этот хэндлер будет срабатывать на команду "/command2"
+# Либо выводит отчеты по подписке пользователю, либо сообщение об отказе,
+# если администратор не добавил право просмотра пользователю.
 async def process_command_2(message: Message):
     chat_id = message.chat.id
     user_name = message.chat.username
-    logging.info(
-        f'{user_name} Получил отчеты по подписке.')
-    # await message.answer('Тест. Получены отчеты по подписке.')
-    await bot.send_message(chat_id, called_functions.get_subscription_reports(user_name))
+    check_resolution = called_functions.check_resolution(user_name)
+    if check_resolution:
+        logging.info(
+            f'{user_name} Получил отчеты по подписке.')
+        await bot.send_message(chat_id, called_functions.get_subscription_reports(user_name))
+    else:
+        logging.info(
+            f'{user_name} пытался получить отчеты. Запрет использования БД')
+        await bot.send_message(chat_id, PROHIBITION_PERMISSION)
 
 
 # Этот хэндлер будет срабатывать на команду "/command3"
+# Либо очищает список подписки на отчеты, возможность создать новый список сохраняется,
+# либо выводит сообщение о запрете, если администратор не добавил прав пользователю.
 async def process_command_3(message: Message):
     chat_id = message.chat.id
     user_name = message.chat.username
-    data_user = called_functions.unsubscribe_from_receiving_reports(user_name)
-    logging.info(
-        f'{user_name} Отписался от получения отчетов: {data_user}')
-    await bot.send_message(chat_id, 'Тест. Вы отписались от получения отчетов по подписке.')
+    check_resolution = called_functions.check_resolution(user_name)
+    if check_resolution:
+        data_user = called_functions.unsubscribe_from_receiving_reports(
+            user_name)
+        logging.info(
+            f'{user_name} Отписался от получения отчетов: {data_user}')
+        await bot.send_message(chat_id, 'Тест. Вы отписались от получения отчетов по подписке.')
+    else:
+        logging.info(
+            f'{user_name} пытался отписаться от получения отчетов. Запрет использования БД')
+        await bot.send_message(chat_id, PROHIBITION_PERMISSION)
+
+
+# Этот хэндлер будет срабатывать на команду "/get_report_for_admin"
+# Получение админом отчета по всем пользователям бота
+async def process_command_get_report_for_admin(message: Message):
+    chat_id = message.chat.id
+    user_name = message.chat.username
+    report_permissions = called_functions.get_report_permissions(
+        user_name)
+    await bot.send_message(chat_id, report_permissions)
+
+
+async def process_command_add_right_view_reports(message: Message):
+    user_name = message.chat.username
+    chat_id = message.chat.id
+    list_data = message.text.split(" ")
+    print(user_name, chat_id, list_data, sep='\n')
 
 
 # Этот хэндлер будет срабатывать на любые ваши текстовые сообщения
@@ -87,32 +138,39 @@ async def send_echo(message: Message):
     user_name = message.chat.username
     chat_id = message.chat.id
     # Считываем сообщение пользователя из телеги
-    list_data = message.text.split(" ")
-    try:
-        # Преобразуем в список чисел
-        # При ошибке уходим в исключения
-        list_int = list(map(int, list_data))
-        list_int.sort()
-        # Из списка доступных отчетов получает их номера
-        list_index_available_reports = [
-            i + 1 for i in range(len(names_available_reports))]
-        # Все элементы введенные пользователем должны быть в списке номеров доступных к подписке отчетов
-        if all([i in list_index_available_reports for i in list_int]):
-            # Списки равны - идем в БД и заполняем, ищем пользователя и заполняем
-            # второй параметр из списка полученных отчетов. [chat_id, []]
-            called_functions.add_reports_to_subscription(user_name, list_int)
+    check_resolution = called_functions.check_resolution(user_name)
+    if check_resolution:
+        list_data = message.text.split(" ")
+        try:
+            # Преобразуем в список чисел
+            # При ошибке уходим в исключения
+            list_int = list(map(int, list_data))
+            list_int.sort()
+            # Из списка доступных отчетов получает их номера
+            list_index_available_reports = [
+                i + 1 for i in range(len(names_available_reports))]
+            # Все элементы введенные пользователем должны быть в списке номеров доступных к подписке отчетов
+            if all([i in list_index_available_reports for i in list_int]):
+                # Списки равны - идем в БД и заполняем, ищем пользователя и заполняем
+                # второй параметр из списка полученных отчетов. [chat_id, []]
+                called_functions.add_reports_to_subscription(
+                    user_name, list_int)
+                logging.info(
+                    f'{user_name} Подписался на получение отчетов: {list_data}')
+                await bot.send_message(chat_id, text_constants.SUBSCRIPTION_MESSAGE)
+            else:
+                logging.info(
+                    f'{user_name} Ввел данные незарегистрированных отчетов: {list_data}')
+                await bot.send_message(chat_id, text_constants.INVALID_DATA)
+        except:
+            broken_data = text_constants.BROKEN_DATA
             logging.info(
-                f'{user_name} Подписался на получение отчетов: {list_data}')
-            await bot.send_message(chat_id, text_constants.SUBSCRIPTION_MESSAGE)
-        else:
-            logging.info(
-                f'{user_name} Ввел данные незарегистрированных отчетов: {list_data}')
-            await bot.send_message(chat_id, text_constants.INVALID_DATA)
-    except:
-        broken_data = text_constants.BROKEN_DATA
+                f'{user_name} Ввел невалидные данные: {list_data}')
+            await bot.send_message(chat_id, broken_data)
+    else:
         logging.info(
-            f'{user_name} Ввел невалидные данные: {list_data}')
-        await bot.send_message(chat_id, broken_data)
+            f'{user_name} пытался подписаться на получение отчетов. Запрет использования БД')
+        await bot.send_message(chat_id, PROHIBITION_PERMISSION)
 
 
 # Регистрируем хэндлеры
@@ -121,6 +179,10 @@ dp.message.register(process_help_command, Command(commands='help'))
 dp.message.register(process_command_1, Command(commands='command1'))
 dp.message.register(process_command_2, Command(commands='command2'))
 dp.message.register(process_command_3, Command(commands='command3'))
+dp.message.register(process_command_get_report_for_admin,
+                    Command(commands='get_report_for_admin'))
+dp.message.register(process_command_add_right_view_reports,
+                    Command(commands='add_view'))
 dp.message.register(send_echo)
 
 

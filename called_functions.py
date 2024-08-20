@@ -19,7 +19,10 @@ def add_user_in_db(user_name, chat_id):
     f_db = sh.open(filename)
     if user_name in f_db.keys():
         return False
-    f_db[user_name] = [chat_id, []]
+    if chat_id in text_constants.LIST_ID_ADMINISTRATOR:
+        f_db[user_name] = [chat_id, [], True]
+    else:
+        f_db[user_name] = [chat_id, [], False]
     f_db.close()
     return True
 
@@ -43,7 +46,6 @@ def unsubscribe_from_receiving_reports(user_name):
         empty_list = list()
         list_data[1] = empty_list
         f_db[user_name] = list_data
-    # f_db.close()
     return f_db[user_name]
 
 
@@ -117,3 +119,32 @@ def get_login_allure_docker_service_ui():
             return login
     except requests.exceptions.RequestException as e:
         return e
+
+
+def check_resolution(user_name):
+    f_db = sh.open(filename)
+    if user_name in f_db.keys():
+        list_data = f_db[user_name]
+        check_resolution = list_data[2]
+        return check_resolution
+    return False
+
+
+def get_report_permissions(user_name):
+    if check_resolution(user_name):
+        f_db = sh.open(filename)
+        result_txt = ""
+        for key in list(f_db.keys()):
+            result_txt += "---------------\n"
+            result_txt += f'username: {key}, list reports: {f_db[key][1]} check: {f_db[key][2]}\n'
+            result_txt += "---------------\n"
+        return result_txt
+    return 'Вы не админ бота.'
+
+
+# get_report_permissions("Durtanyan")
+# unsubscribe_from_receiving_reports("Durtanyan")
+add_user_in_db("Durtanyan_1", 1262060646)
+add_user_in_db("Durtanyan_2", 1262060647)
+add_user_in_db("Durtanyan_3", 1262060648)
+add_user_in_db("Durtanyan_4", 1262060649)

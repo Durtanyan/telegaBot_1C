@@ -2,6 +2,7 @@
 config.py
 /__pycache__/
 msg.log
-db_users.bak
-db_users.dat
-db_users.dir
+./db_users.bak
+*.dat
+*.dir
+

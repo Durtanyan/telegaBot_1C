@@ -3,11 +3,19 @@ NAMES_TEST_PACKAGE = ['features-for-constructor-crm',
 NAMES_AVAILABLE_REPORTS = [
     'Конструктор номенклатуры СРМ', 'АРМ-автоматика', 'Новый отчет для теста']
 
+LIST_ID_ADMINISTRATOR = [1262060645]
+
+QUERY_ADMINISTRATOR = """
+Запрос на регистрацию отправлен администратору.
+"""
+
 TRUE_MESSAGEREGISTRATION = """
 Я бот отчетов о прохождении тестов.
 Вы зарегистрированы в системе. Ознакомьтесь с инструкцией:
 """
 FALSE_MESSAGEREGISTRATION = "Вы уже зарегистрированы в системе."
+
+PROHIBITION_PERMISSION = "Администратор не дал Вам разрешения на работу с БД."
 
 HELP_MESSAGE = """
 1. Нажмите кнопку - Меню.
