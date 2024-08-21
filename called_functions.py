@@ -142,6 +142,20 @@ def get_report_permissions(user_name):
     return 'Вы не админ бота.'
 
 
+def add_view_reports(user_name):
+    f_db = sh.open(filename)
+    if user_name in f_db.keys():
+        list_data = f_db[user_name]
+        list_data[2] = True
+        f_db[user_name] = list_data
+        return True
+    return False
+
+
+def get_user_id(user_name):
+    pass
+
+
 # get_report_permissions("Durtanyan")
 # unsubscribe_from_receiving_reports("Durtanyan")
 add_user_in_db("Durtanyan_1", 1262060646)
