@@ -6,15 +6,20 @@ import config
 import text_constants
 
 
+# имя файла для модуля shelve
 filename = "db_users"
 
 
+# Просто вывводит картинку с кошаками при выполнении конманды /start
 def get_image_cat():
     url_request = 'https://api.thecatapi.com/v1/images/search'
     answer = requests.get(url_request).json()
     return answer[0]["url"]
 
 
+# Добавляет пользователя в БД. Срабатывает по команде /start
+# Пользователь добавляется влюбом случае, права на работу с БД
+# Ему добавляет администратор бота
 def add_user_in_db(user_name, chat_id):
     f_db = sh.open(filename)
     if user_name in f_db.keys():
@@ -27,6 +32,8 @@ def add_user_in_db(user_name, chat_id):
     return True
 
 
+# Изменяет список отчетов на которые подписан пользователь
+# Список всегда перезаполняется заново.
 def add_reports_to_subscription(user_name, list_reports):
     f_db = sh.open(filename)
     if user_name in f_db.keys():
@@ -39,6 +46,7 @@ def add_reports_to_subscription(user_name, list_reports):
     f_db.close()
 
 
+# Очищает список отчетов по подписке
 def unsubscribe_from_receiving_reports(user_name):
     f_db = sh.open(filename)
     if user_name in f_db.keys():
@@ -49,6 +57,7 @@ def unsubscribe_from_receiving_reports(user_name):
     return f_db[user_name]
 
 
+# Выводит пользователю отчеты по подписке
 def get_subscription_reports(user_name):
     f_db = sh.open(filename)
     if user_name in f_db.keys():
@@ -61,11 +70,13 @@ def get_subscription_reports(user_name):
                 list_subscription_reports)
             text_message_user = get_text_message_user(
                 login_allire_docker_service_ui, names_reports_available_user)
-
             return text_message_user
         return "У вас нет отчетов по подписке."
 
 
+# Подключается к api Allure Docker service UI, по лгину получает
+# страницы по списку отчетов по подписке, парсит данные этой страницы и формирует
+# общее сообщение пользователю. Используется в get_subscription_reports
 def get_text_message_user(login_allire_docker_service_ui, names_reports_available_user):
     cookies = {"access_token_cookie": login_allire_docker_service_ui}
     final_text = ""
@@ -74,7 +85,6 @@ def get_text_message_user(login_allire_docker_service_ui, names_reports_availabl
             f"http://192.168.23.148:5050/allure-docker-service/projects/{name}", cookies=cookies)
         index_latest_report = json.loads(data_reports.text)[
             "data"]["project"]["reports_id"][1]
-
         data = requests.get(
             f"http://192.168.23.148:5050/allure-docker-service/emailable-report/export?project_id={name}", cookies=cookies)
         html = data.text
@@ -96,6 +106,7 @@ def get_text_message_user(login_allire_docker_service_ui, names_reports_availabl
     return final_text
 
 
+# Получает имена отчетов по подписке для пользователя
 def get_names_reports_available_user(list_subscription_reports):
     names_all_reports = text_constants.NAMES_TEST_PACKAGE
     list_available_reports = [names_all_reports[i - 1]
@@ -103,6 +114,7 @@ def get_names_reports_available_user(list_subscription_reports):
     return list_available_reports
 
 
+# Получает логин для подключения к api Allure Docker service UI
 def get_login_allure_docker_service_ui():
     query = {
         "username": config.USERMANE_ALLUREDOCKERSERVUCE,
@@ -121,6 +133,8 @@ def get_login_allure_docker_service_ui():
         return e
 
 
+# Возвращает право пользователя на работу с БД.
+# Пользование командами, подписка на отчеты и т.д.
 def check_resolution(user_name):
     f_db = sh.open(filename)
     if user_name in f_db.keys():
@@ -130,6 +144,7 @@ def check_resolution(user_name):
     return False
 
 
+# Команда администратора бота. Выводит данные о пользователях. Имя, id, право поьзоваться БД
 def get_report_permissions(user_name):
     if check_resolution(user_name):
         f_db = sh.open(filename)
@@ -142,23 +157,42 @@ def get_report_permissions(user_name):
     return 'Вы не админ бота.'
 
 
+# Команда администратора бота. Добавляет пользователю право пользователя БД.
 def add_view_reports(user_name):
     f_db = sh.open(filename)
     if user_name in f_db.keys():
         list_data = f_db[user_name]
         list_data[2] = True
         f_db[user_name] = list_data
+        f_db.close()
         return True
     return False
 
 
+# Удаляет у пользователя права на доступ к БД.
+def delete_view_reports(user_name):
+    f_db = sh.open(filename)
+    if user_name in f_db.keys():
+        list_data = f_db[user_name]
+        list_data[2] = False
+        f_db[user_name] = list_data
+        f_db.close()
+        return True
+    return False
+
+
+# Выдает по запросу chat_id пользователя из БД
 def get_user_id(user_name):
-    pass
+    f_db = sh.open(filename)
+    if user_name in f_db.keys():
+        list_data = f_db[user_name]
+        return list_data[0]
 
 
 # get_report_permissions("Durtanyan")
 # unsubscribe_from_receiving_reports("Durtanyan")
-add_user_in_db("Durtanyan_1", 1262060646)
-add_user_in_db("Durtanyan_2", 1262060647)
-add_user_in_db("Durtanyan_3", 1262060648)
-add_user_in_db("Durtanyan_4", 1262060649)
+# add_user_in_db("Durtanyan_1", 1262060646)
+# add_user_in_db("Durtanyan_2", 1262060647)
+# add_user_in_db("Durtanyan_3", 1262060648)
+# add_user_in_db("Durtanyan_4", 1262060649)
+# delete_view_reports("Durtanyan_2")

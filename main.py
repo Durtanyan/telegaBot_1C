@@ -142,12 +142,42 @@ async def process_command_add_right_view_reports(message: Message):
                 f'{user_name} администратор выполнил команду дал пользователю {list_data[1]} право пользователя БД.')
             await bot.send_message(chat_id, f'Пользователю {list_data[1]} добавлены права пользователя БД.')
             chat_user_id = called_functions.get_user_id(list_data[1])
-            await bot.send_message(text_constants.LIST_ID_ADMINISTRATOR[0], f'{list_data[1]}, администратор добавил Вам права пользователя БД.\
+            await bot.send_message(chat_user_id, f'{list_data[1]}, администратор добавил Вам права пользователя БД.\
                                    теперь Вы можете получать отчеты по подписке.')
             logging.info(
                 f'Пользователю {list_data[1]} отправлено сообщение о добавлении права пользователя БД.')
         else:
             await bot.send_message(chat_id, f'Не удачная попытка добавить права пользователя ДБ для {list_data[1]}')
+            logging.info(
+                f'Пользователь {user_name} пытался изменить права пользователя {list_data[1]}. Неудачно. Отсутствуют права администратора БД')
+    else:
+        logging.info(
+            f'Для пользователя {list_data[1]}, была попытка изменить прва')
+        await bot.send_message(chat_id, text_constants.PROHIBITION_PERMISSION)
+
+
+# Этот хендлер срабатывает на команду /add_view [логин пользователя]
+# Добавляет пользователю права на работу с БД - подписка на отчеты,
+# просмотр отчетов, доступны стандартные команды и тд.
+# Хендлер доступен только администратору бота. см.  text_constants.LIST_ID_ADMINISTRATOR
+async def process_command_delete_right_view_reports(message: Message):
+    user_name = message.chat.username
+    chat_id = message.chat.id
+    list_id_admins = text_constants.LIST_ID_ADMINISTRATOR
+    if chat_id in list_id_admins:
+        list_data = message.text.split(" ")
+        add_view_reports = called_functions.delete_view_reports(list_data[1])
+        if add_view_reports:
+            logging.info(
+                f'{user_name} администратор выполнил [delete_view] команду запретил пользователю {list_data[1]} работу с  БД.')
+            await bot.send_message(chat_id, f'Пользователю {list_data[1]} удалены права пользователя БД.')
+            chat_user_id = called_functions.get_user_id(list_data[1])
+            await bot.send_message(chat_user_id, f'{list_data[1]}, администратор удалил Вам права пользователя БД.\
+                                   теперь Вы можете пользоваться ботом.')
+            logging.info(
+                f'Пользователю {list_data[1]} отправлено сообщение об удалении права пользователя БД.')
+        else:
+            await bot.send_message(chat_id, f'Не удачная попытка удалить права пользователя ДБ для {list_data[1]}')
             logging.info(
                 f'Пользователь {user_name} пытался изменить права пользователя {list_data[1]}. Неудачно. Отсутствуют права администратора БД')
     else:
@@ -209,6 +239,8 @@ dp.message.register(process_command_get_report_for_admin,
                     Command(commands='get_report_for_admin'))
 dp.message.register(process_command_add_right_view_reports,
                     Command(commands='add_view'))
+dp.message.register(process_command_delete_right_view_reports,
+                    Command(commands='delete_view'))
 dp.message.register(send_echo)
 
 
